@@ -33,8 +33,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadPermissions = () => {
-    const all = getPermissions();
+  const loadPermissions = async () => {
+    const all = await getPermissions();
     setPermissions(all.filter(p => p.studentId === user.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
   };
 
@@ -83,15 +83,18 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
       createdAt: new Date().toISOString()
     };
 
-    savePermission(newPermission);
-    setPermissions([newPermission, ...permissions]);
+    const success = await savePermission(newPermission);
+    if (success) {
+      await loadPermissions();
+      setActiveTab('history');
+      // Reset form
+      setFile(null);
+      setPreview(null);
+      setReason('');
+    } else {
+      alert("Failed to submit permission. Please check connection.");
+    }
     setIsAnalyzing(false);
-    
-    // Reset form (keep user details mostly cleared or defaulted)
-    setFile(null);
-    setPreview(null);
-    setReason('');
-    setActiveTab('history');
   };
 
   return (

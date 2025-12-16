@@ -6,16 +6,18 @@ interface GeneralTeacherDashboardProps {
   user: User;
 }
 
-const GeneralTeacherDashboard: React.FC<GeneralTeacherDashboardProps> = ({ user }) => {
+export default function GeneralTeacherDashboard({ user }: GeneralTeacherDashboardProps) {
   const [dept, setDept] = useState('CAI'); // Default to CAI
   const [year, setYear] = useState('3');
   const [section, setSection] = useState('A');
   const [results, setResults] = useState<PermissionRequest[]>([]);
   const [searched, setSearched] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    const all = getPermissions();
+    setLoading(true);
+    const all = await getPermissions();
     // Filter for approved permissions in that section
     const filtered = all.filter(p => 
       p.department === dept && 
@@ -24,6 +26,7 @@ const GeneralTeacherDashboard: React.FC<GeneralTeacherDashboardProps> = ({ user 
       p.status === PermissionStatus.APPROVED
     ).sort((a, b) => (a.rollNumber || '').localeCompare(b.rollNumber || '')); // Sort by Roll Number
     setResults(filtered);
+    setLoading(false);
     setSearched(true);
   };
 
@@ -58,8 +61,8 @@ const GeneralTeacherDashboard: React.FC<GeneralTeacherDashboardProps> = ({ user 
               <option value="C">C</option>
             </select>
           </div>
-          <button type="submit" className="bg-indigo-600 text-white py-2 px-4 rounded-md shadow hover:bg-indigo-700">
-            Fetch Permissions
+          <button type="submit" disabled={loading} className="bg-indigo-600 text-white py-2 px-4 rounded-md shadow hover:bg-indigo-700 disabled:opacity-50">
+            {loading ? 'Fetching...' : 'Fetch Permissions'}
           </button>
         </form>
       </div>
@@ -103,6 +106,4 @@ const GeneralTeacherDashboard: React.FC<GeneralTeacherDashboardProps> = ({ user 
       )}
     </div>
   );
-};
-
-export default GeneralTeacherDashboard;
+}

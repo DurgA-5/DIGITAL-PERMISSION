@@ -13,14 +13,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   // College Mail State
   const [collegeEmail, setCollegeEmail] = useState('');
 
-  const handlePasswordLogin = (e: React.FormEvent) => {
+  const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const result = loginWithPassword(email, password);
+    setLoading(true);
+    const result = await loginWithPassword(email, password);
+    setLoading(false);
     if (result.success && result.user) {
       onLogin(result.user);
     } else {
@@ -28,11 +31,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
   };
 
-  const handleCollegeLogin = (e: React.FormEvent) => {
+  const handleCollegeLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     // Reuse existing domain validation logic
-    const result = loginWithGoogle(collegeEmail);
+    const result = await loginWithGoogle(collegeEmail);
+    setLoading(false);
     if (result.success && result.user) {
       onLogin(result.user);
     } else {
@@ -53,7 +58,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 alt="MITS CAI Logo" 
                 className="h-20 w-auto bg-white rounded-lg p-2 shadow-md object-contain"
                 onError={(e) => {
-                  // Fallback if the Google Share link doesn't resolve to an image directly
                   e.currentTarget.style.display = 'none';
                   e.currentTarget.parentElement!.innerHTML += '<div class="h-20 w-20 bg-white text-indigo-700 rounded-lg flex items-center justify-center font-bold text-xl">MITS</div>';
                 }}
@@ -130,12 +134,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                    />
                    <button 
                     type="submit"
-                    className="flex items-center justify-center gap-3 w-full bg-indigo-600 text-white border border-transparent font-medium py-2.5 px-4 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                    disabled={loading}
+                    className="flex items-center justify-center gap-3 w-full bg-indigo-600 text-white border border-transparent font-medium py-2.5 px-4 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50"
                   >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Sign in with College Mail ID
+                    {loading ? 'Signing in...' : 'Sign in with College Mail ID'}
                   </button>
                 </form>
               </div>
@@ -184,9 +186,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
               <button
                 type="submit"
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-800 hover:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                disabled={loading}
+                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-800 hover:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
               >
-                Login to Dashboard
+                {loading ? 'Logging in...' : 'Login to Dashboard'}
               </button>
             </form>
           )}

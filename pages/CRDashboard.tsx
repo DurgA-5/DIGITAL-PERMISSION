@@ -23,8 +23,8 @@ const CRDashboard: React.FC<CRDashboardProps> = ({ user }) => {
   const [endTime, setEndTime] = useState('');
 
   // Data Fetching
-  const refreshData = () => {
-    const all = getPermissions();
+  const refreshData = async () => {
+    const all = await getPermissions();
     
     // Get local date string YYYY-MM-DD
     const d = new Date();
@@ -73,7 +73,7 @@ const CRDashboard: React.FC<CRDashboardProps> = ({ user }) => {
     }
   }, [selectedPerm]);
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!selectedPerm) return;
     const updated: PermissionRequest = {
       ...selectedPerm,
@@ -84,12 +84,12 @@ const CRDashboard: React.FC<CRDashboardProps> = ({ user }) => {
       startTime: startTime,
       endTime: endTime
     };
-    savePermission(updated);
-    refreshData();
+    await savePermission(updated);
+    await refreshData();
     setSelectedPerm(null);
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!selectedPerm) return;
     const updated: PermissionRequest = {
       ...selectedPerm,
@@ -97,8 +97,8 @@ const CRDashboard: React.FC<CRDashboardProps> = ({ user }) => {
       approvedBy: `${user.name} (CR)`,
       approvedAt: new Date().toISOString()
     };
-    savePermission(updated);
-    refreshData();
+    await savePermission(updated);
+    await refreshData();
     setSelectedPerm(null);
   };
 

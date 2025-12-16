@@ -30,8 +30,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user }) => {
     }
   }, [selectedPerm]);
 
-  const loadPermissions = () => {
-    const all = getPermissions();
+  const loadPermissions = async () => {
+    const all = await getPermissions();
     // Filter for teacher's class
     const filtered = all.filter(p => 
       p.department === user.department && 
@@ -41,7 +41,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user }) => {
     setPermissions(filtered);
   };
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!selectedPerm) return;
     const updated: PermissionRequest = {
       ...selectedPerm,
@@ -52,12 +52,12 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user }) => {
       startTime: startTime,
       endTime: endTime
     };
-    savePermission(updated);
-    loadPermissions();
+    await savePermission(updated);
+    await loadPermissions();
     setSelectedPerm(null);
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!selectedPerm) return;
     const updated: PermissionRequest = {
       ...selectedPerm,
@@ -65,8 +65,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user }) => {
       approvedBy: user.name,
       approvedAt: new Date().toISOString()
     };
-    savePermission(updated);
-    loadPermissions();
+    await savePermission(updated);
+    await loadPermissions();
     setSelectedPerm(null);
   };
 
