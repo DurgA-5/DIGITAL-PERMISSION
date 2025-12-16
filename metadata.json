@@ -1,0 +1,5 @@
+{
+  "name": "MITS CAI Permission Portal",
+  "description": "MITS Department of CAI Permission Approval Portal. Manage permissions, approvals, and attendance securely with AI verification.",
+  "requestFramePermissions": []
+}
