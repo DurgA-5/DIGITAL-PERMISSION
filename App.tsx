@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { initStorage, getCurrentUser, logoutUser } from './services/storageService';
+import { initStorage, getCurrentUser, logoutUser, checkBackendHealth } from './services/storageService';
 import { User, UserRole } from './types';
 import Login from './pages/Login';
 import Layout from './components/Layout';
@@ -11,18 +11,29 @@ import GeneralTeacherDashboard from './pages/GeneralTeacherDashboard';
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isBackendConnected, setIsBackendConnected] = useState(false);
 
   useEffect(() => {
+    // 1. Initialize local storage (fallback)
     initStorage();
+    
+    // 2. Check current session
     const currentUser = getCurrentUser();
     if (currentUser) {
       setUser(currentUser);
     }
-    setLoading(false);
+
+    // 3. Check Backend Connection
+    checkBackendHealth().then(status => {
+      setIsBackendConnected(status);
+      setLoading(false);
+    });
   }, []);
 
   const handleLogin = (loggedInUser: User) => {
     setUser(loggedInUser);
+    // Re-check backend health on login attempt
+    checkBackendHealth().then(setIsBackendConnected);
   };
 
   const handleLogout = () => {
@@ -58,14 +69,14 @@ const App: React.FC = () => {
 
   if (!user) {
     return (
-      <Layout user={null} onLogout={() => {}}>
+      <Layout user={null} onLogout={() => {}} isBackendConnected={isBackendConnected}>
         <Login onLogin={handleLogin} />
       </Layout>
     );
   }
 
   return (
-    <Layout user={user} onLogout={handleLogout}>
+    <Layout user={user} onLogout={handleLogout} isBackendConnected={isBackendConnected}>
       {renderDashboard()}
     </Layout>
   );

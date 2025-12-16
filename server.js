@@ -12,7 +12,14 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' })); // Increased limit for image uploads
 
 // Initialize SQLite Database
-const db = new sqlite3.Database(':memory:'); // Using in-memory for demo. Use './database.sqlite' for persistence.
+// Changed from ':memory:' to a file path to ensure data persistence
+const db = new sqlite3.Database('./unipermit.db', (err) => {
+  if (err) {
+    console.error("Error opening database:", err.message);
+  } else {
+    console.log("Connected to the unipermit.db SQLite database.");
+  }
+});
 
 // Initialize Schema
 db.serialize(() => {
@@ -30,7 +37,6 @@ db.serialize(() => {
   )`);
 
   // Permissions Table
-  // We store the full JSON object in 'data' for flexibility, but keep key fields as columns for querying
   db.run(`CREATE TABLE IF NOT EXISTS permissions (
     id TEXT PRIMARY KEY,
     studentId TEXT,
@@ -42,24 +48,27 @@ db.serialize(() => {
     data TEXT
   )`);
 
-  // Seed Mock Users
-  const MOCK_USERS = [
-    { id: 't-a', name: 'Class Teacher (Sec A)', email: 'teachera@mits.ac.in', role: 'CLASS_TEACHER', department: 'CAI', year: '3', section: 'A', password: 'TSECA' },
-    { id: 't-b', name: 'Class Teacher (Sec B)', email: 'teacherb@mits.ac.in', role: 'CLASS_TEACHER', department: 'CAI', year: '3', section: 'B', password: 'TSECB' },
-    { id: 't-c', name: 'Class Teacher (Sec C)', email: 'teacherc@mits.ac.in', role: 'CLASS_TEACHER', department: 'CAI', year: '3', section: 'C', password: 'TSECC' },
-    { id: 'cr-a', name: 'CR (Sec A)', email: 'cra@mits.ac.in', role: 'CR', department: 'CAI', year: '3', section: 'A', rollNumber: '23691A31CRA', password: '23691A31CRA' },
-    { id: 'cr-b', name: 'CR (Sec B)', email: 'crb@mits.ac.in', role: 'CR', department: 'CAI', year: '3', section: 'B', rollNumber: '23691A31CRB', password: '23691A31CRB' },
-    { id: 'cr-c', name: 'CR (Sec C)', email: 'crc@mits.ac.in', role: 'CR', department: 'CAI', year: '3', section: 'C', rollNumber: '23691A31CRC', password: '23691A31CRC' },
-    { id: '4', name: 'General Teacher', email: 'staff.ai@mits.ac.in', role: 'TEACHER', department: 'CAI', year: '3', section: 'A', password: '' }
-  ];
+  // Seed Mock Users (Only if table is empty to avoid duplicates on restart)
+  db.get("SELECT count(*) as count FROM users", (err, row) => {
+    if (row && row.count === 0) {
+      console.log("Seeding initial users...");
+      const MOCK_USERS = [
+        { id: 't-a', name: 'Class Teacher (Sec A)', email: 'teachera@mits.ac.in', role: 'CLASS_TEACHER', department: 'CAI', year: '3', section: 'A', password: 'TSECA' },
+        { id: 't-b', name: 'Class Teacher (Sec B)', email: 'teacherb@mits.ac.in', role: 'CLASS_TEACHER', department: 'CAI', year: '3', section: 'B', password: 'TSECB' },
+        { id: 't-c', name: 'Class Teacher (Sec C)', email: 'teacherc@mits.ac.in', role: 'CLASS_TEACHER', department: 'CAI', year: '3', section: 'C', password: 'TSECC' },
+        { id: 'cr-a', name: 'CR (Sec A)', email: 'cra@mits.ac.in', role: 'CR', department: 'CAI', year: '3', section: 'A', rollNumber: '23691A31CRA', password: '23691A31CRA' },
+        { id: 'cr-b', name: 'CR (Sec B)', email: 'crb@mits.ac.in', role: 'CR', department: 'CAI', year: '3', section: 'B', rollNumber: '23691A31CRB', password: '23691A31CRB' },
+        { id: 'cr-c', name: 'CR (Sec C)', email: 'crc@mits.ac.in', role: 'CR', department: 'CAI', year: '3', section: 'C', rollNumber: '23691A31CRC', password: '23691A31CRC' },
+        { id: '4', name: 'General Teacher', email: 'staff.ai@mits.ac.in', role: 'TEACHER', department: 'CAI', year: '3', section: 'A', password: '' }
+      ];
 
-  const stmt = db.prepare("INSERT OR REPLACE INTO users (id, name, email, role, department, year, section, rollNumber, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-  MOCK_USERS.forEach(user => {
-    stmt.run(user.id, user.name, user.email, user.role, user.department, user.year, user.section, user.rollNumber, user.password);
+      const stmt = db.prepare("INSERT OR REPLACE INTO users (id, name, email, role, department, year, section, rollNumber, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+      MOCK_USERS.forEach(user => {
+        stmt.run(user.id, user.name, user.email, user.role, user.department, user.year, user.section, user.rollNumber, user.password);
+      });
+      stmt.finalize();
+    }
   });
-  stmt.finalize();
-
-  console.log("Database initialized and seeded.");
 });
 
 // --- HELPER: Cleanup Expired Permissions ---
@@ -86,6 +95,11 @@ const cleanupExpiredPermissions = () => {
 };
 
 // --- ROUTES ---
+
+// Health Check Endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'online', database: 'sqlite' });
+});
 
 // Login Endpoint
 app.post('/api/login', (req, res) => {
@@ -196,5 +210,5 @@ app.post('/api/permissions', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`SQL Backend is active.`);
+  console.log(`Persistent SQL Backend (unipermit.db) is active.`);
 });

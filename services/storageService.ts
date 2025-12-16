@@ -51,6 +51,15 @@ export const initStorage = () => {
   }
 };
 
+export const checkBackendHealth = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE}/health`);
+    return response.ok;
+  } catch (e) {
+    return false;
+  }
+};
+
 // --- AUTHENTICATION LOGIC ---
 
 // 1. Password Login

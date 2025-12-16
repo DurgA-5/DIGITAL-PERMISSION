@@ -5,9 +5,10 @@ interface LayoutProps {
   user: User | null;
   onLogout: () => void;
   children: React.ReactNode;
+  isBackendConnected?: boolean;
 }
 
-const Layout: React.FC<LayoutProps> = ({ user, onLogout, children }) => {
+const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, isBackendConnected = false }) => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       <nav className="bg-indigo-700 text-white shadow-md sticky top-0 z-50">
@@ -52,8 +53,16 @@ const Layout: React.FC<LayoutProps> = ({ user, onLogout, children }) => {
       </main>
 
       <footer className="bg-white border-t border-gray-200 mt-auto">
-        <div className="max-w-7xl mx-auto py-6 px-4 text-center text-sm text-gray-500">
-          © {new Date().getFullYear()} MITS Dept of CAI. Developed by the students of AI Department.
+        <div className="max-w-7xl mx-auto py-6 px-4 flex flex-col md:flex-row justify-between items-center text-sm text-gray-500 gap-4">
+          <div>
+             © {new Date().getFullYear()} MITS Dept of CAI. Developed by the students of AI Department.
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`h-2.5 w-2.5 rounded-full ${isBackendConnected ? 'bg-green-500 animate-pulse' : 'bg-orange-400'}`}></span>
+            <span className={`font-medium ${isBackendConnected ? 'text-green-700' : 'text-orange-600'}`}>
+              {isBackendConnected ? 'System Online (SQL)' : 'Offline Mode (Local)'}
+            </span>
+          </div>
         </div>
       </footer>
     </div>
