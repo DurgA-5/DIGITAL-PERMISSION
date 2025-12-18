@@ -1,3 +1,4 @@
+
 import { User, UserRole, PermissionRequest, PermissionStatus } from "../types";
 
 const STORAGE_KEYS = {
@@ -6,10 +7,11 @@ const STORAGE_KEYS = {
   CURRENT_USER: 'unipermit_current_user'
 };
 
-// You can change this to your backend URL if deploying (e.g., https://my-backend.onrender.com/api)
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = 
+  ((import.meta as any).env && (import.meta as any).env.VITE_API_URL) || 
+  (process.env.REACT_APP_API_URL) || 
+  'http://localhost:3001/api';
 
-// --- FALLBACK MOCK DATA (Used if Backend is Offline) ---
 const MOCK_USERS: User[] = [
   { id: 't-a', name: 'Class Teacher (Sec A)', email: 'teachera@mits.ac.in', role: UserRole.CLASS_TEACHER, department: 'CAI', year: '3', section: 'A', password: 'TSECA' },
   { id: 't-b', name: 'Class Teacher (Sec B)', email: 'teacherb@mits.ac.in', role: UserRole.CLASS_TEACHER, department: 'CAI', year: '3', section: 'B', password: 'TSECB' },
@@ -20,7 +22,6 @@ const MOCK_USERS: User[] = [
   { id: '4', name: 'General Teacher', email: 'staff.ai@mits.ac.in', role: UserRole.TEACHER, department: 'CAI', year: '3', section: 'A' }
 ];
 
-// Helper to get local date string YYYY-MM-DD
 const getLocalDateString = () => {
   const d = new Date();
   const year = d.getFullYear();
@@ -30,14 +31,12 @@ const getLocalDateString = () => {
 };
 
 export const initStorage = () => {
-  // Check if users exist in local storage, if not seed them (Offline fallback)
   const storedUsersStr = localStorage.getItem(STORAGE_KEYS.USERS);
   let users: User[] = storedUsersStr ? JSON.parse(storedUsersStr) : [];
   
   MOCK_USERS.forEach(mockUser => {
-    const existingIndex = users.findIndex(u => u.email.toLowerCase() === mockUser.email.toLowerCase());
+    const existingIndex = users.findIndex(u => u.id === mockUser.id);
     if (existingIndex > -1) {
-      // Update existing mock user definitions in case code changed
       users[existingIndex] = { ...users[existingIndex], ...mockUser };
     } else {
       users.push(mockUser);
@@ -60,12 +59,8 @@ export const checkBackendHealth = async (): Promise<boolean> => {
   }
 };
 
-// --- AUTHENTICATION LOGIC ---
-
-// 1. Password Login
 export const loginWithPassword = async (email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
   try {
-    // Try Backend First
     const response = await fetch(`${API_BASE}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -81,18 +76,19 @@ export const loginWithPassword = async (email: string, password: string): Promis
             return { success: false, error: data.error || 'Login failed' };
         }
     } else {
-        throw new Error(`Server returned ${response.status}`);
+        const data = await response.json();
+        throw new Error(data.error || `Server returned ${response.status}`);
     }
-  } catch (error) {
-    console.warn("Backend unavailable, falling back to local storage logic:", error);
+  } catch (error: any) {
+    console.warn("Backend login failed or unavailable:", error.message);
     
     // Fallback Local Logic
     const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
     const normalizedEmail = email.trim().toLowerCase();
     const user = users.find((u: User) => u.email.toLowerCase() === normalizedEmail);
 
-    if (!user) return { success: false, error: 'User not found (Offline Mode).' };
-    if (!user.password) return { success: false, error: 'Please use "Sign in with Google" for this account (Offline Mode).' };
+    if (!user) return { success: false, error: 'User not found.' };
+    if (!user.password) return { success: false, error: 'Please use "Sign in with Google" for this account.' };
     if (user.password !== password) return { success: false, error: 'Invalid password.' };
 
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
@@ -100,10 +96,8 @@ export const loginWithPassword = async (email: string, password: string): Promis
   }
 };
 
-// 2. Google Login
 export const loginWithGoogle = async (email: string): Promise<{ success: boolean; user?: User; error?: string }> => {
   try {
-    // Try Backend First
     const response = await fetch(`${API_BASE}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -119,28 +113,23 @@ export const loginWithGoogle = async (email: string): Promise<{ success: boolean
             return { success: false, error: data.error || 'Login failed' };
         }
     } else {
-        throw new Error(`Server returned ${response.status}`);
+        const data = await response.json();
+        throw new Error(data.error || `Server returned ${response.status}`);
     }
-  } catch (error) {
-    console.warn("Backend unavailable, falling back to local storage logic:", error);
+  } catch (error: any) {
+    console.warn("Backend Google login failed or unavailable:", error.message);
 
-    // Fallback Local Logic
     const normalizedEmail = email.trim().toLowerCase();
-    
     if (!normalizedEmail.endsWith('@mits.ac.in')) {
-      return { success: false, error: 'Access restricted to @mits.ac.in domain (Offline Mode).' };
-    }
-
-    const isProtectedAccount = MOCK_USERS.some(u => 
-        u.email.toLowerCase() === normalizedEmail && (u.role === UserRole.CLASS_TEACHER || u.role === UserRole.CR)
-    );
-
-    if (isProtectedAccount) {
-        return { success: false, error: 'This administrative account must login with a Password (Offline Mode).' };
+      return { success: false, error: 'Access restricted to @mits.ac.in domain.' };
     }
 
     const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
     let user = users.find((u: User) => u.email.toLowerCase() === normalizedEmail);
+
+    if (user && user.password) {
+        return { success: false, error: 'This administrative account must login with a Password.' };
+    }
 
     if (!user) {
         const isGeneralStaff = normalizedEmail.includes('staff');
@@ -174,8 +163,6 @@ export const getCurrentUser = (): User | null => {
   return stored ? JSON.parse(stored) : null;
 };
 
-// --- PERMISSIONS LOGIC ---
-
 export const getPermissions = async (): Promise<PermissionRequest[]> => {
   try {
     const response = await fetch(`${API_BASE}/permissions`);
@@ -183,11 +170,7 @@ export const getPermissions = async (): Promise<PermissionRequest[]> => {
     const permissions: PermissionRequest[] = await response.json();
     return permissions;
   } catch (error) {
-    console.warn("Backend unavailable, fetching from local storage.");
-    // Fallback Local Logic
     const permissions: PermissionRequest[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.PERMISSIONS) || '[]');
-    
-    // Simulate cleanup locally
     const now = new Date();
     let hasChanges = false;
     const validPermissions = permissions.filter(p => {
@@ -219,8 +202,6 @@ export const savePermission = async (permission: PermissionRequest): Promise<boo
     });
     return response.ok;
   } catch (error) {
-    console.warn("Backend unavailable, saving to local storage.");
-    // Fallback Local Logic
     const permissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.PERMISSIONS) || '[]');
     const existingIndex = permissions.findIndex((p: PermissionRequest) => p.id === permission.id);
     
@@ -235,7 +216,6 @@ export const savePermission = async (permission: PermissionRequest): Promise<boo
   }
 };
 
-// Logic to check if active based on time (Local Time)
 export const isPermissionActive = (perm: PermissionRequest): boolean => {
   if (perm.status !== PermissionStatus.APPROVED) return false;
   if (!perm.permissionDate || !perm.startTime || !perm.endTime) return false;
